@@ -1,6 +1,7 @@
 import socket
 import json
 import threading
+import time
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 
@@ -82,7 +83,8 @@ def get_encrypted_request(request, b_public_key, a_private_key):
 
     return {
         "encrypted_request": encrypted_request.hex(),
-        "signature": signature.hex()
+        "signature": signature.hex(),
+        "client_id": "Client_A"
     }
 
 def decrypt_and_verify(encrypted_data, a_private_key, b_public_key):
@@ -131,8 +133,15 @@ def send_message_to_B(message, b_public_key):
 
 
 def start_client_A():
-   
-    certificate_b = fetch_certificate("Client_B")
+    
+    if("Client_B" not in personal_certificate_store):    
+        certificate_b = fetch_certificate("Client_B")
+    else:
+        certificate_b = personal_certificate_store["Client_B"]
+        if(certificate_b["original_certificate"]["issued_at"] + certificate_b["original_certificate"]["validity"] < time.time()):
+            certificate_b = fetch_certificate("Client_B")
+    
+    personal_certificate_store["Client_B"] = certificate_b
     b_public_key = serialization.load_pem_public_key(certificate_b["original_certificate"]["public_key"].encode())
     if(certificate_b != None):
         try:
@@ -173,8 +182,10 @@ if __name__ == "__main__":
     format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
 
-    request = {"type": "register", "client_id": client_id}
+    request = {"type": "register", "client_id": client_id, "public_key": a_pub_key_pem.decode()}
     response = send_request_to_CA(request)
+
+    personal_certificate_store = {}
 
     if response["status"] == "success":
         print(f"Certificate registered...")
@@ -183,12 +194,5 @@ if __name__ == "__main__":
     
     ca_public_key = load_ca_public_key()
         # Save A Public Key to a File
-    with open("a_public_key.pem", "wb") as f:
-        f.write(
-            a_public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
-        )
     threading.Thread(target=start_client_A).start()
 

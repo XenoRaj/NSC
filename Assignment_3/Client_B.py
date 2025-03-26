@@ -1,6 +1,7 @@
 import socket
 import json
 import threading
+import time
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 # Generate Client Key Pair
@@ -8,7 +9,7 @@ b_private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 b_public_key = b_private_key.public_key()
 
 # Serialize Public Key
-pub_key_pem = b_public_key.public_bytes(
+b_pub_key_pem = b_public_key.public_bytes(
     encoding=serialization.Encoding.PEM,
     format=serialization.PublicFormat.SubjectPublicKeyInfo
 )
@@ -122,15 +123,24 @@ def decrypt_and_verify(encrypted_data, b_private_key, a_public_key):
 
 def handle_messages(client_socket):
     try:
-        certificate_a = fetch_certificate("Client_A")
-        print(certificate_a)
-        a_public_key = serialization.load_pem_public_key(certificate_a["original_certificate"]["public_key"].encode())
-
         data = client_socket.recv(4096).decode()
         request = json.loads(data)
+        
+        client_id = request["client_id"]
+        if(client_id not in personal_certificate_store):
+            certificate_a = fetch_certificate(client_id)
+        else:
+            certificate_a = personal_certificate_store[client_id]
+            if(certificate_a["original_certificate"]["issued_at"] + certificate_a["original_certificate"]["validity"] < time.time()):
+                certificate_a = fetch_certificate(client_id)       
+        
+        personal_certificate_store[client_id] = certificate_a
 
+        a_public_key = serialization.load_pem_public_key(certificate_a["original_certificate"]["public_key"].encode())
+
+        
         decrypted_request = decrypt_and_verify(request, b_private_key, a_public_key)
-        print(f"Decrypted Request: {decrypted_request}")
+     
         if(decrypted_request["type"] == "greetings"):
             if(decrypted_request["message"] == "hello1"):
                 response = {"type": "acknolegement", "status": "success", "message": "ack1"}
@@ -178,20 +188,15 @@ def start_client(host="0.0.0.0", port=5001):
 # Request a Signed Certificate from CA and then start the client for listening
 if __name__ == "__main__":
     client_id = "Client_B"
-    request = {"type": "register", "client_id": client_id}
+    request = {"type": "register", "client_id": client_id, "public_key": b_pub_key_pem.decode()}
     response = send_request_to_CA(request)
 
+    personal_certificate_store = {}
+
     if response["status"] == "success":
-        print(f"Certificate received:\n{json.dumps(response['certificate'], indent=4)}")
+        print(f"Certificate received:")
     else:
         print("Failed to get certificate.")
         # 🔑 Save CA Public Key to a File
-    with open("b_public_key.pem", "wb") as f:
-        f.write(
-            b_public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
-        )
     threading.Thread(target=start_client).start()
 
