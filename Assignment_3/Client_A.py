@@ -46,15 +46,15 @@ def fetch_certificate(client_id):
     request = {"type" : "get_cert", "client_id" : client_id}
     response = send_request_to_CA(request)
     if response["status"] == "success" :
-        print(f"{client_id}'s Certificate received...")
+        print(f"A: {client_id}'s Certificate received...")
         if verify_certificate(response["certificate"]["encrypted_certificate"], response["certificate"]["original_certificate"]):
-            print(f"Certificate verified...")
+            print(f"A: Certificate verified...")
             return response["certificate"]
         else:
-            print(f"Certificate verification failed...")
+            print(f"A: Certificate verification failed...")
             return None
     else:
-        print("Failed to get certificate.")
+        print("A: Failed to get certificate.")
         return None
     
 
@@ -112,9 +112,9 @@ def decrypt_and_verify(encrypted_data, a_private_key, b_public_key):
             ),
             hashes.SHA256()
         )
-        print("Signature is valid...")
+        print("A: Signature is valid...")
     except:
-        print("Signature verification failed...")
+        print("A: Signature verification failed...")
 
     return json.loads(decrypted_request.decode())
 
@@ -126,9 +126,9 @@ def send_message_to_B(message, b_public_key):
     
     decrypted_response = decrypt_and_verify(response, a_private_key, b_public_key)
     if decrypted_response["status"] == "success":
-        print(f"Reply from B: {decrypted_response['message']}")
+        print(f"A: Reply from B: {decrypted_response['message']}")
     else:
-        print(f"Bad response from B: {decrypted_response['message']}")
+        print(f"A: Bad response from B: {decrypted_response['message']}")
     return decrypted_response["message"]
 
 
@@ -145,24 +145,24 @@ def start_client_A():
     b_public_key = serialization.load_pem_public_key(certificate_b["original_certificate"]["public_key"].encode())
     if(certificate_b != None):
         try:
-            print("Sending messages to B...")
+            print("A: Sending messages to B...")
 
-            print("Message 1: hello1")
+            print("A: Message 1: hello1")
             reply = send_message_to_B("hello1", b_public_key)  
             assert reply == "ack1"
 
-            print("Message 2: hello2")
+            print("A: Message 2: hello2")
             reply = send_message_to_B("hello2", b_public_key)
             assert reply == "ack2"
 
-            print("Message 3: hello3")
+            print("A: Message 3: hello3")
             reply = send_message_to_B("hello3", b_public_key)
             assert reply == "ack3"
 
-            print("All messages sent successfully...")
-            print("Client A exiting...")
+            print("A: All messages sent successfully...")
+            print("A: Client A exiting...")
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"A: Error: {e}")
         
 
         
@@ -188,11 +188,10 @@ if __name__ == "__main__":
     personal_certificate_store = {}
 
     if response["status"] == "success":
-        print(f"Certificate registered...")
+        print(f"A: Certificate registered...")
     else:
-        print("Failed to get certificate.")
+        print("A: Failed to get certificate.")
     
     ca_public_key = load_ca_public_key()
         # Save A Public Key to a File
     threading.Thread(target=start_client_A).start()
-

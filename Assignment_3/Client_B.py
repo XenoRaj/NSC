@@ -49,15 +49,15 @@ def fetch_certificate(client_id):
     request = {"type" : "get_cert", "client_id" : client_id}
     response = send_request_to_CA(request)
     if response["status"] == "success" :
-        print(f"{client_id}'s Certificate received...")
+        print(f"B: {client_id}'s Certificate received...")
         if verify_certificate(response["certificate"]["encrypted_certificate"], response["certificate"]["original_certificate"]):
-            print(f"Certificate verified...")
+            print(f"B: Certificate verified...")
             return response["certificate"]
         else:
-            print(f"Certificate verification failed...")
+            print(f"B: Certificate verification failed...")
             return None
     else:
-        print("Failed to get certificate.")
+        print("B: Failed to get certificate.")
         return None
     
 
@@ -115,9 +115,9 @@ def decrypt_and_verify(encrypted_data, b_private_key, a_public_key):
             ),
             hashes.SHA256()
         )
-        print("Signature is valid....")
+        print("B: Signature is valid....")
     except:
-        print("Signature verification failed...")
+        print("B: Signature verification failed...")
 
     return json.loads(decrypted_request.decode())
 
@@ -158,13 +158,13 @@ def handle_messages(client_socket):
 
                 client_socket.send(json.dumps(encrypted_response).encode())
             else:
-                print("Unknown message")
+                print("B: Unknown message")
                 response = {"type": "acknolegement", "status": "error", "message": "Unknown message"}
                 encrypted_response = get_encrypted_request(response, a_public_key, b_private_key)
 
                 client_socket.send(json.dumps(encrypted_response).encode())
     except Exception as e:
-        print(f"Error handling client: {e}")
+        print(f"B: Error handling client: {e}")
     finally:
         client_socket.close()
 
@@ -173,15 +173,15 @@ def start_client(host="0.0.0.0", port=5001):
     client_B = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_B.bind((host, port))
     client_B.listen(5)
-    print(f"[+] Client B running on {host}:{port}")
+    print(f"B: [+] Client B running on {host}:{port}")
 
     try:
         while True:
             client_socket, addr = client_B.accept()
-            print(f"[+] Connection from {addr}")
+            print(f"B: [+] Connection from {addr}")
             threading.Thread(target=handle_messages, args=(client_socket,)).start()
     except KeyboardInterrupt:
-        print("\n[!] Shutting down Client B gracefully.")
+        print("\nB: [!] Shutting down Client B gracefully.")
     finally:
         client_B.close()
 
@@ -194,9 +194,8 @@ if __name__ == "__main__":
     personal_certificate_store = {}
 
     if response["status"] == "success":
-        print(f"Certificate received:")
+        print(f"B: Certificate registered...")
     else:
-        print("Failed to get certificate.")
+        print("B: Failed to get certificate...")
         # 🔑 Save CA Public Key to a File
     threading.Thread(target=start_client).start()
-

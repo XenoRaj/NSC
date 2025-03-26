@@ -47,7 +47,7 @@ def handle_client(client_socket):
             # print(certificates)
             response = {"status": "success", "certificate": cert}
             client_socket.send(json.dumps(response).encode())
-            print("Client Registered...")
+            print("CA: Client Registered...")
 
         elif request["type"] == "get_cert":
             # A client wants another client's certificate
@@ -59,10 +59,10 @@ def handle_client(client_socket):
                 response = {"status": "error", "message": "Certificate not found"}
             
             client_socket.send(json.dumps(response).encode())
-            print("Certificate sent...")
+            print("CA: Certificate sent...")
 
     except Exception as e:
-        print(f"Error handling client: {e}")
+        print(f"CA: Error handling client: {e}")
     finally:
         client_socket.close()
 
@@ -77,18 +77,18 @@ def start_ca_server(host="0.0.0.0", port=5000):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
     server.listen(5)
-    print(f"[+] CA Server running on {host}:{port}")
+    print(f"CA: [+] CA Server running on {host}:{port}")
 
     try:
         while True:
             client_socket, addr = server.accept()
-            print(f"[+] Connection from {addr}")
+            print(f"CA: [+] Connection from {addr}")
             threading.Thread(target=handle_client, args=(client_socket,)).start()
     except KeyboardInterrupt:
-        print("\n[!] Shutting down CA Server gracefully.")
+        print("\nCA: [!] Shutting down CA Server gracefully.")
     finally:
         server.close()
-        print("[+] CA Server closed.")
+        print("CA: [+] CA Server closed.")
 
 if __name__ == "__main__":
     # Generate CA Key Pair (Public/Private)
